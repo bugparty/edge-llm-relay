@@ -2,17 +2,22 @@
 
 # edge-llm-relay
 
-A Cloudflare Workers LLM relay for cross-region API access.
+A Cloudflare Workers LLM relay for:
+
+Normalizes non‑standard third‑party coding plan / LLM APIs into OpenAI‑compatible and Anthropic‑compatible endpoints.
+
+Supports Cloudflare AI Gateway custom providers by exposing proper /chat/completions, /models and other universal paths so you can route requests through the Gateway and get unified logging, rate limiting and observability.
+
+Adapts to JetBrains IDE’s model listing pattern: exposes /models in the right shape so you can use third‑party backends from JetBrains AI Assistant without needing a separate OpenAI‑compatible proxy.
+
+Accelerates endpoints that have no global CDN or international acceleration by using Cloudflare Workers + Smart Placement, pushing requests closer to end users and reducing overseas latency.
 
 Project goals:
 - Low latency: combine Cloudflare Smart Placement and global edge nodes, so the Worker runs closer to upstream API endpoints.
 - Stable access: provide a unified and more reliable OpenAI/Anthropic-compatible endpoint for end users.
 - Easy extension: switch/add upstream providers through environment variables, without changing business-side client logic.
 
-Use cases:
-- You are not in the same country/region as the target endpoint, but still need stable access to that LLM API.
-- Your target model service is outside your country, and cross-border network jitter is noticeable.
-- You want one client SDK workflow to work across multiple providers.
+
 
 ## What This Relay Provides
 
