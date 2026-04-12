@@ -19,12 +19,28 @@
 	"compatibility_flags": [
 		"nodejs_compat"
 	],
-	"vars": {
-		"ROUTE_PREFIX": "baidu",
-		"MODELS_ENABLED": "true",
-		"UPSTREAM_BASE_URL": "https://qianfan.baidubce.com/v2/coding",
-		"ANTHROPIC_UPSTREAM_BASE_URL": "https://qianfan.baidubce.com/anthropic/coding",
-		"MODELS_JSON": "[{\"id\":\"ernie-4.5-turbo-20260402\"},{\"id\":\"minimax-m2.5\"},{\"id\":\"deepseek-v3.2\"},{\"id\":\"glm-5\"},{\"id\":\"kimi-k2.5\"}]"
+	// Environment-specific configurations
+	"env": {
+		"baidu": {
+			"name": "llmgateway",
+			"vars": {
+				"ROUTE_PREFIX": "baidu",
+				"MODELS_ENABLED": "true",
+				"UPSTREAM_BASE_URL": "https://qianfan.baidubce.com/v2/coding",
+				"ANTHROPIC_UPSTREAM_BASE_URL": "https://qianfan.baidubce.com/anthropic/coding",
+				"MODELS_JSON": "[{\"id\":\"ernie-4.5-turbo-20260402\"},{\"id\":\"minimax-m2.5\"},{\"id\":\"deepseek-v3.2\"},{\"id\":\"glm-5\"},{\"id\":\"kimi-k2.5\"}]"
+			}
+		},
+		"minimax": {
+			"name": "llmgateway-minimax",
+			"vars": {
+				"ROUTE_PREFIX": "minimax",
+				"MODELS_ENABLED": "true",
+				"UPSTREAM_BASE_URL": "https://api.minimaxi.com/v1",
+				"ANTHROPIC_UPSTREAM_BASE_URL": "https://api.minimaxi.com/anthropic",
+				"MODELS_JSON": "[{\"id\":\"minimax-m2.5\"},{\"id\":\"minimax-text-01\"}]"
+			}
+		}
 	}
 	/**
 	 * Smart Placement
