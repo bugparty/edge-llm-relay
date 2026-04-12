@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Cloudflare Workers gateway that proxies OpenAI-compatible API requests to Baidu's Qianfan coding API. It translates standard OpenAI endpoints to Baidu's upstream format.
+This is a Cloudflare Workers relay that proxies OpenAI-compatible API requests to upstream providers (for example Baidu Qianfan and MiniMax). It translates standard OpenAI/Anthropic-compatible endpoints to provider upstream formats.
 
 ## Commands
 

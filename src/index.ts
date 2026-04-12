@@ -211,6 +211,14 @@ function buildUpstreamHeaders(request: Request): Headers {
 	return headers;
 }
 
+function buildBufferedErrorHeaders(upstreamHeaders: Headers): Headers {
+	const headers = new Headers(upstreamHeaders);
+	headers.delete("content-encoding");
+	headers.delete("content-length");
+	headers.delete("transfer-encoding");
+	return headers;
+}
+
 function modelsResponse(models: ModelResponseItem[]): Response {
 	return json({
 		object: "list",
@@ -258,6 +266,25 @@ async function proxyChatCompletions(
 		body: request.body,
 	});
 
+	if (!upstreamResponse.ok) {
+		const errorText = await upstreamResponse.text();
+		console.log("proxy_result", {
+			provider: new URL(upstreamBaseUrl).hostname,
+			path: incomingUrl.pathname,
+			upstreamBaseUrl,
+			status: upstreamResponse.status,
+			request_id: upstreamResponse.headers.get("x-request-id"),
+			content_type: upstreamResponse.headers.get("content-type"),
+			error: errorText.slice(0, 2048),
+		});
+
+		return new Response(errorText, {
+			status: upstreamResponse.status,
+			statusText: upstreamResponse.statusText,
+			headers: buildBufferedErrorHeaders(upstreamResponse.headers),
+		});
+	}
+
 	return new Response(upstreamResponse.body, {
 		status: upstreamResponse.status,
 		statusText: upstreamResponse.statusText,
@@ -278,6 +305,15 @@ async function proxyAnthropicMessages(
 		headers: buildUpstreamHeaders(request),
 		body: request.body,
 	});
+
+	if (!upstreamResponse.ok) {
+		const errorText = await upstreamResponse.text();
+		return new Response(errorText, {
+			status: upstreamResponse.status,
+			statusText: upstreamResponse.statusText,
+			headers: buildBufferedErrorHeaders(upstreamResponse.headers),
+		});
+	}
 
 	return new Response(upstreamResponse.body, {
 		status: upstreamResponse.status,
