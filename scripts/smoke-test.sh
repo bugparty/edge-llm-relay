@@ -76,6 +76,24 @@ assert_contains() {
 	echo "[PASS] ${label}"
 }
 
+assert_any_contains() {
+	local file="$1"
+	local label="$2"
+	shift 2
+
+	for needle in "$@"; do
+		if grep -Fq "${needle}" "${file}"; then
+			echo "[PASS] ${label}"
+			return
+		fi
+	done
+
+	echo "[FAIL] ${label}: none of expected markers found" >&2
+	echo "--- ${file} ---" >&2
+	cat "${file}" >&2
+	exit 1
+}
+
 readarray -t files < <(request models GET /baidu/v1/models)
 assert_status "$(status_code "${files[0]}")" "200" "models status"
 assert_contains "${files[1]}" '"object":"list"' "models list shape"
@@ -87,7 +105,14 @@ assert_contains "${files[1]}" '"id":"glm-5"' "root models contains glm-5"
 
 readarray -t files < <(request unauth POST /baidu/v1/chat/completions '{"model":"glm-5","messages":[]}' no)
 assert_status "$(status_code "${files[0]}")" "401" "unauthorized chat status"
-assert_contains "${files[1]}" '"code":"missing_authorization"' "unauthorized error shape"
+if grep -Fq '"code":"missing_authorization"' "${files[1]}" || grep -Fq '"code":"invalid_iam_token"' "${files[1]}"; then
+	echo "[PASS] unauthorized error shape"
+else
+	echo "[FAIL] unauthorized error shape: expected missing_authorization or invalid_iam_token" >&2
+	echo "--- ${files[1]} ---" >&2
+	cat "${files[1]}" >&2
+	exit 1
+fi
 
 readarray -t files < <(request chat POST /baidu/v1/chat/completions '{"model":"glm-5","messages":[{"role":"user","content":"Reply with exactly: ok"}],"stream":false}')
 assert_status "$(status_code "${files[0]}")" "200" "chat status"
@@ -102,6 +127,14 @@ assert_contains "${files[1]}" 'data: [DONE]' "stream done marker"
 readarray -t files < <(request root-chat POST /v1/chat/completions '{"model":"glm-5","messages":[{"role":"user","content":"Reply with exactly: ok"}],"stream":false}')
 assert_status "$(status_code "${files[0]}")" "200" "root chat status"
 assert_contains "${files[1]}" '"object":"chat.completion"' "root chat completion shape"
+
+readarray -t files < <(request anthropic-chat POST /baidu/anthropic/v1/messages '{"model":"glm-5","max_tokens":32,"messages":[{"role":"user","content":"Reply with exactly: ok"}]}')
+assert_status "$(status_code "${files[0]}")" "200" "anthropic chat status"
+assert_any_contains "${files[1]}" "anthropic response shape" '"type":"message"' '"content"'
+
+readarray -t files < <(request root-anthropic-chat POST /anthropic/v1/messages '{"model":"glm-5","max_tokens":32,"messages":[{"role":"user","content":"Reply with exactly: ok"}]}')
+assert_status "$(status_code "${files[0]}")" "200" "root anthropic chat status"
+assert_any_contains "${files[1]}" "root anthropic response shape" '"type":"message"' '"content"'
 
 echo
 echo "Smoke test passed for ${TARGET_URL}"

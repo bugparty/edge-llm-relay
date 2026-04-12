@@ -2,9 +2,12 @@
 
 Base URL: `https://qianfan.baidubce.com/v2/coding`
 
+Anthropic Base URL: `https://qianfan.baidubce.com/anthropic/coding`
+
 ## Available
 
 - `POST /chat/completions` works with OpenAI-style chat payloads.
+- `POST /messages` works with Anthropic-style messages payloads.
 - Non-stream returns `object: "chat.completion"`.
 - Stream returns `text/event-stream` with `data: {...}` and `data: [DONE]`.
 

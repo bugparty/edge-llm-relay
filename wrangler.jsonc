@@ -14,13 +14,18 @@
 			"invocation_logs": true
 		}
 	},
-	"placement": {
-		"host": "qianfan.baidubce.com:443"
-	},
+	"placement": {  "mode": "smart" },
 	"upload_source_maps": true,
 	"compatibility_flags": [
 		"nodejs_compat"
-	]
+	],
+	"vars": {
+		"ROUTE_PREFIX": "baidu",
+		"MODELS_ENABLED": "true",
+		"UPSTREAM_BASE_URL": "https://qianfan.baidubce.com/v2/coding",
+		"ANTHROPIC_UPSTREAM_BASE_URL": "https://qianfan.baidubce.com/anthropic/coding",
+		"MODELS_JSON": "[{\"id\":\"ernie-4.5-turbo-20260402\"},{\"id\":\"minimax-m2.5\"},{\"id\":\"deepseek-v3.2\"},{\"id\":\"glm-5\"},{\"id\":\"kimi-k2.5\"}]"
+	}
 	/**
 	 * Smart Placement
 	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
