@@ -34,6 +34,19 @@
 				"MODELS_JSON": "[{\"id\":\"ernie-4.5-turbo-20260402\"},{\"id\":\"minimax-m2.5\"},{\"id\":\"deepseek-v3.2\"},{\"id\":\"glm-5\"},{\"id\":\"kimi-k2.5\"}]"
 			}
 		},
+		"ali": {
+			"name": "llmgateway-jd",
+			"placement": {
+				"host": "modelservice.jdcloud.com:443"
+			},
+			"vars": {
+				"ROUTE_PREFIX": "ali",
+				"MODELS_ENABLED": "true",
+				"UPSTREAM_BASE_URL": "https://modelservice.jdcloud.com/coding/openai/v1",
+				"ANTHROPIC_UPSTREAM_BASE_URL": "https://modelservice.jdcloud.com/coding/anthropic",
+				"MODELS_JSON": "[{\"id\":\"GLM-4.7\"},{\"id\":\"MiniMax-M2.5\"},{\"id\":\"deepseek-v3.2\"},{\"id\":\"glm-5\"},{\"id\":\"kimi-k2.5\"}]"
+			}
+		},
 		"minimax": {
 			"name": "llmgateway-minimax",
 			"placement": {
