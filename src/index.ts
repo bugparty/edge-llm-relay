@@ -1,15 +1,13 @@
-const DEFAULT_UPSTREAM_BASE_URL = "https://qianfan.baidubce.com/v2/coding";
-const DEFAULT_ANTHROPIC_UPSTREAM_BASE_URL = "https://qianfan.baidubce.com/anthropic/coding";
+const DEFAULT_UPSTREAM_BASE_URL = "https://api.openai.com/v1";
+const DEFAULT_ANTHROPIC_UPSTREAM_BASE_URL = "https://api.anthropic.com/v1";
 const DEFAULT_MODEL_CREATED_AT = 1775601600;
-const DEFAULT_MODEL_OWNER = "baidu-qianfan";
-const DEFAULT_ROUTE_PREFIX = "baidu";
+const DEFAULT_MODEL_OWNER = "openai";
+const DEFAULT_ROUTE_PREFIX = "openai";
 
 const DEFAULT_MODELS = [
-	"ernie-4.5-turbo-20260402",
-	"minimax-m2.5",
-	"deepseek-v3.2",
-	"glm-5",
-	"kimi-k2.5",
+	"gpt-4",
+	"gpt-4-turbo",
+	"gpt-3.5-turbo",
 ];
 
 type ModelResponseItem = {
