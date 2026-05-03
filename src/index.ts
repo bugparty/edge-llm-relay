@@ -254,25 +254,31 @@ async function proxyChatCompletions(
 		);
 	}
 
+	const clonedRequest = request.clone();
+
 	const upstreamUrl = new URL(`${upstreamBaseUrl}/chat/completions`);
 	const incomingUrl = new URL(request.url);
 	upstreamUrl.search = incomingUrl.search;
 
-	const upstreamResponse = await fetch(upstreamUrl, {
-		method: "POST",
-		headers: buildUpstreamHeaders(request),
-		body: request.body,
-	});
+	const [upstreamResponse, bodyText] = await Promise.all([
+		fetch(upstreamUrl, {
+			method: "POST",
+			headers: buildUpstreamHeaders(request),
+			body: request.body,
+		}),
+		clonedRequest.text(),
+	]);
 
 	if (!upstreamResponse.ok) {
 		const errorText = await upstreamResponse.text();
-		console.log("proxy_result", {
+		console.warn(`${upstreamResponse.status} response error`, {
 			provider: new URL(upstreamBaseUrl).hostname,
 			path: incomingUrl.pathname,
 			upstreamBaseUrl,
 			status: upstreamResponse.status,
 			request_id: upstreamResponse.headers.get("x-request-id"),
 			content_type: upstreamResponse.headers.get("content-type"),
+			payload: bodyText,
 			error: errorText.slice(0, 2048),
 		});
 
@@ -358,7 +364,7 @@ export default {
 			return proxyAnthropicMessages(request, config.anthropicUpstreamBaseUrl);
 		}
 
-		console.log("request_not_found", {
+		console.warn("request_not_found", {
 			method: request.method,
 			path: url.pathname,
 			search: url.search,
