@@ -360,6 +360,13 @@ export default {
 			return proxyAnthropicMessages(request, config.anthropicUpstreamBaseUrl);
 		}
 
+		console.log("request_not_found", {
+			method: request.method,
+			path: url.pathname,
+			search: url.search,
+			hostname: url.hostname,
+		});
+
 		return errorResponse(
 			404,
 			"not_found",
