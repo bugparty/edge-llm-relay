@@ -31,7 +31,30 @@
 				"MODELS_ENABLED": "true",
 				"UPSTREAM_BASE_URL": "https://qianfan.baidubce.com/v2/coding",
 				"ANTHROPIC_UPSTREAM_BASE_URL": "https://qianfan.baidubce.com/anthropic/coding",
-				"MODELS_JSON": "[{\"id\":\"ernie-4.5-turbo-20260402\"},{\"id\":\"minimax-m2.5\"},{\"id\":\"deepseek-v3.2\"},{\"id\":\"glm-5\"},{\"id\":\"kimi-k2.5\"}]"
+				"MODELS_JSON": "[{\"id\":\"ernie-4.5-turbo-20260402\"},{\"id\":\"minimax-m2.5\"},{\"id\":\"deepseek-v3.2\"},{\"id\":\"glm-5\"},{\"id\":\"kimi-k2.5\"}]",
+				"UPSTREAM_CONTROL_AUTH": {
+					"profiles": {
+						"usage_default": {
+							"cookies": {
+								"bce-sessionid": "001de0bfa2553814f53af5cf3b21084f6d6",
+								"bce-long-term-sessionid": "0015e9cd42448bb4225b27892c5e167de49"
+							}
+						},
+						"resource_list": {
+							"cookies": {
+								"bce-sessionid": "001de0bfa2553814f53af5cf3b21084f6d6"
+							}
+						}
+					}
+				},
+				"USAGE_QUERY_CONFIG": {
+					"provider": "baidu",
+					"request": {
+						"url": "https://console.bce.baidu.com/api/qianfan/charge/codingPlan/resourceList",
+						"method": "GET",
+						"authProfile": "resource_list"
+					}
+				}
 			}
 		},
 		"jd": {
@@ -44,7 +67,146 @@
 				"MODELS_ENABLED": "true",
 				"UPSTREAM_BASE_URL": "https://modelservice.jdcloud.com/coding/openai/v1",
 				"ANTHROPIC_UPSTREAM_BASE_URL": "https://modelservice.jdcloud.com/coding/anthropic",
-				"MODELS_JSON": "[{\"id\":\"GLM-4.7\"},{\"id\":\"MiniMax-M2.5\"},{\"id\":\"deepseek-v3.2\"},{\"id\":\"GLM-5\"},{\"id\":\"kimi-k2.5\"},{\"id\":\"Qwen3-Coder\"},{\"id\":\"Kimi-K2-Turbo\"}]"
+				"MODELS_JSON": "{\"DeepSeek-V3.2\":{\"name\":\"DeepSeek-V3.2\",\"limit\":{\"context\":128000,\"output\":64000}},\"GLM-5\":{\"name\":\"GLM-5\",\"limit\":{\"context\":200000,\"output\":32000}},\"GLM-4.7\":{\"name\":\"GLM-4.7\",\"limit\":{\"context\":200000,\"output\":128000}},\"MiniMax-M2.5\":{\"name\":\"MiniMax-M2.5\",\"limit\":{\"context\":200000,\"output\":128000}},\"Kimi-K2.5\":{\"name\":\"Kimi-K2.5\",\"limit\":{\"context\":256000,\"output\":32000}},\"Kimi-K2-Turbo\":{\"name\":\"Kimi-K2-Turbo\",\"limit\":{\"context\":256000,\"output\":32000}},\"Qwen3-Coder\":{\"name\":\"Qwen3-Coder\",\"limit\":{\"context\":64000,\"output\":8000}}}",
+				"UPSTREAM_CONTROL_AUTH": {
+					"profiles": {
+						"active_plan": {
+							"cookies": {
+								"thor": "0D952D56EA09AD0761F2D6CE8190044D781247F08C84A2D34400E2DDBCCB4369B24D4249AD5C50870EFCCC07A804A50C3D023D4798E8CC3795FF03250B29D12A729FC1E925C5B0CB23A658914AC1BFFC4F57E70747A70012BA4FCDEFFB8E8DBBA9D4FF10337164F4DAA079AB06A3D02AD2C918C90082826DEE4995ABF4DCC2AE7B7459DF6BDF4F642E0C08A8E1C0AC5A"
+							}
+						}
+					}
+				},
+				"USAGE_QUERY_CONFIG": {
+					"provider": "jd",
+					"request": {
+						"url": "https://joybuilder-console.jdcloud.com/openApi/modelservice/describeUserActivePlan",
+						"method": "GET",
+						"authProfile": "active_plan"
+					}
+				}
+			}
+		},
+		"zai": {
+			"name": "llmgateway-zai",
+			"placement": {
+				"host": "api.z.ai:443"
+			},
+			"vars": {
+				"ROUTE_PREFIX": "zai",
+				"MODELS_ENABLED": "true",
+				"UPSTREAM_BASE_URL": "https://api.z.ai/api/coding/paas/v4",
+				"ANTHROPIC_UPSTREAM_BASE_URL": "https://api.z.ai/api/anthropic",
+				"MODELS_JSON": [
+					{ "id": "glm-5.1" },
+					{ "id": "glm-5-turbo" },
+					{ "id": "glm-5" },
+					{ "id": "glm-4.7" }
+				],
+				"UPSTREAM_CONTROL_AUTH": {
+					"profiles": {
+						"quota_limit": {
+							"headers": {
+								"authorization": "Bearer eyJhbGciOiJIUzUxMiJ9.eyJ1c2VyX3R5cGUiOiJQRVJTT05BTCIsInVzZXJfaWQiOjYzNDE0OTMsImFwaV9rZXkiOm51bGwsInVzZXJfa2V5IjoiMDhjZTk5MzMtZmE2ZC00ZTFmLWEwYWQtMWNhNTQzMTZhNDU3IiwiY3VzdG9tZXJfaWQiOiI3NDEwMTc3MTAzNTEwMzg4NSIsInVzZXJuYW1lIjpudWxsLCJjdXN0b21lciI6eyJpZCI6NjM0MTQ5MywiY3JlYXRlQnkiOm51bGwsImNyZWF0ZVRpbWUiOiIyMDI2LTAyLTE0IDEwOjExOjQ0IiwidXBkYXRlQnkiOm51bGwsInVwZGF0ZVRpbWUiOiIyMDI2LTAyLTE0IDEwOjExOjQ0IiwiY3JlYXRlQnlJZCI6bnVsbCwidXBkYXRlQnlJZCI6bnVsbCwiZW5hYmxlU3RhdHVzIjoiRU5BQkxFIiwiZGVsRmxhZyI6ZmFsc2UsImN1c3RvbWVyTnVtYmVyIjo3NDEwMTc3MTAzNTEwMzg4NSwibmlja05hbWUiOm51bGwsImN1c3RvbWVyTmFtZSI6bnVsbCwiZW1haWwiOm51bGwsInBob25lTnVtYmVyIjpudWxsLCJ1c2VyVHlwZSI6IlBFUlNPTkFMIiwic291cmNlIjoi6buY6K6kIiwiYXZhdGFyIjpudWxsLCJwYXNzd29yZCI6bnVsbCwiY2hhbm5lbCI6IlpfQUkiLCJvcGVuSWQiOm51bGwsInBob25lT3BlbklkIjpudWxsLCJhbWluZXJJZCI6bnVsbCwiYWNUeXBlIjoiTk9UX0FDIiwiYWNTdGF0ZSI6Ik5PVF9BQyIsImFjU3VibWl0VHlwZSI6Ik5PVF9TVUJNSVQiLCJzdGFydFRpbWUiOm51bGwsImVuZFRpbWUiOm51bGwsImNvdW50cnlDb2RlIjpudWxsLCJjY2ZNZW1iZXJJZCI6bnVsbCwic2VjdXJpdHlFbmNyeXB0RmxhZyI6Ik4iLCJjdXN0b21lcklkcyI6bnVsbCwib3JnYW5pemF0aW9uIjpudWxsLCJpbnZvaWNlVHlwZSI6bnVsbCwidW5pb25JZCI6bnVsbCwid2VjaGF0Tmlja05hbWUiOm51bGwsIm1haW5Vc2VTY2VuYXJpbyI6bnVsbCwiZW5hYmxlVHdvRmEiOm51bGwsImJldGFUZXN0ZXIiOmZhbHNlfX0.R_4kUImLndcZ91nM4qYR6Wa1J6dBnJjkSfPBroSnsPv7s3a0DgK2D94XH6Dx4EzaMBn7okzaM5w23m6nrlV60Q"
+							}
+						}
+					}
+				},
+				"USAGE_QUERY_CONFIG": {
+					"provider": "zai",
+					"request": {
+						"url": "https://api.z.ai/api/monitor/usage/quota/limit",
+						"method": "GET",
+						"authProfile": "quota_limit"
+					}
+				}
+			}
+		},
+		"gateway": {
+			"name": "llmgateway-cn-gateway",
+			"vars": {
+				"DEFAULT_PROVIDER_PREFIX": "baidu",
+				"PROVIDERS_CONFIG": {
+					"baidu": {
+						"upstreamBaseUrl": "https://qianfan.baidubce.com/v2/coding",
+						"anthropicUpstreamBaseUrl": "https://qianfan.baidubce.com/anthropic/coding",
+						"models": [
+							{ "id": "ernie-4.5-turbo-20260402" },
+							{ "id": "minimax-m2.5" },
+							{ "id": "deepseek-v3.2" },
+							{ "id": "glm-5" },
+							{ "id": "kimi-k2.5" }
+						],
+						"upstreamControlAuth": {
+							"profiles": {
+								"resource_list": {
+									"cookies": {
+										"bce-sessionid": "001de0bfa2553814f53af5cf3b21084f6d6"
+									}
+								}
+							}
+						},
+						"usageQuery": {
+							"provider": "baidu",
+							"request": {
+								"url": "https://console.bce.baidu.com/api/qianfan/charge/codingPlan/resourceList",
+								"method": "GET",
+								"authProfile": "resource_list"
+							}
+						}
+					},
+					"jd": {
+						"upstreamBaseUrl": "https://modelservice.jdcloud.com/coding/openai/v1",
+						"anthropicUpstreamBaseUrl": "https://modelservice.jdcloud.com/coding/anthropic",
+						"models": {
+							"DeepSeek-V3.2": {
+								"name": "DeepSeek-V3.2",
+								"limit": { "context": 128000, "output": 64000 }
+							},
+							"GLM-5": {
+								"name": "GLM-5",
+								"limit": { "context": 200000, "output": 32000 }
+							},
+							"GLM-4.7": {
+								"name": "GLM-4.7",
+								"limit": { "context": 200000, "output": 128000 }
+							},
+							"MiniMax-M2.5": {
+								"name": "MiniMax-M2.5",
+								"limit": { "context": 200000, "output": 128000 }
+							},
+							"Kimi-K2.5": {
+								"name": "Kimi-K2.5",
+								"limit": { "context": 256000, "output": 32000 }
+							},
+							"Kimi-K2-Turbo": {
+								"name": "Kimi-K2-Turbo",
+								"limit": { "context": 256000, "output": 32000 }
+							},
+							"Qwen3-Coder": {
+								"name": "Qwen3-Coder",
+								"limit": { "context": 64000, "output": 8000 }
+							}
+						},
+						"upstreamControlAuth": {
+							"profiles": {
+								"active_plan": {
+									"cookies": {
+										"thor": "0D952D56EA09AD0761F2D6CE8190044D781247F08C84A2D34400E2DDBCCB4369B24D4249AD5C50870EFCCC07A804A50C3D023D4798E8CC3795FF03250B29D12A729FC1E925C5B0CB23A658914AC1BFFC4F57E70747A70012BA4FCDEFFB8E8DBBA9D4FF10337164F4DAA079AB06A3D02AD2C918C90082826DEE4995ABF4DCC2AE7B7459DF6BDF4F642E0C08A8E1C0AC5A"
+									}
+								}
+							}
+						},
+						"usageQuery": {
+							"provider": "jd",
+							"request": {
+								"url": "https://joybuilder-console.jdcloud.com/openApi/modelservice/describeUserActivePlan",
+								"method": "GET",
+								"authProfile": "active_plan"
+							}
+						}
+					}
+				}
 			}
 		},
 		"minimax": {

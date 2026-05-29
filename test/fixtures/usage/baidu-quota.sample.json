@@ -1,0 +1,38 @@
+{
+  "success": true,
+  "result": {
+    "totalCount": 1,
+    "items": [
+      {
+        "resourceId": "resource-redacted",
+        "apiKey": "redacted",
+        "planType": "LITE",
+        "resourceStatus": "Running",
+        "effectiveAt": "2026-03-19T11:28:47+08:00",
+        "expiresAt": "2026-06-19T11:28:47+08:00",
+        "quota": {
+          "fiveHour": {
+            "used": 12,
+            "limit": 1200,
+            "resetAt": "2026-05-30T08:10:00+08:00"
+          },
+          "week": {
+            "used": 564,
+            "limit": 9000,
+            "resetAt": "2026-06-01T00:00:00+08:00"
+          },
+          "month": {
+            "used": 2327,
+            "limit": 18000,
+            "resetAt": "2026-06-19T11:28:47+08:00"
+          }
+        },
+        "autoRenew": {
+          "renewTime": 1,
+          "renewTimeUnit": "month"
+        }
+      }
+    ]
+  },
+  "log_id": "191550453"
+}

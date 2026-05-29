@@ -1,3 +1,6 @@
+import { normalizeUsage } from "./usage";
+import type { ProviderId } from "./types/usage";
+
 const DEFAULT_UPSTREAM_BASE_URL = "https://api.openai.com/v1";
 const DEFAULT_ANTHROPIC_UPSTREAM_BASE_URL = "https://api.anthropic.com/v1";
 const DEFAULT_MODEL_CREATED_AT = 1775601600;
@@ -18,17 +21,68 @@ type ModelResponseItem = {
 };
 
 type ModelInput = {
-	id: string;
+	id?: string;
+	name?: string;
 	created?: number;
 	owned_by?: string;
+	limit?: {
+		context?: number;
+		output?: number;
+	};
 };
 
 type RuntimeConfig = {
+	providers: Record<string, ProviderRuntimeConfig>;
+	defaultProviderPrefix: string | null;
+};
+
+type UpstreamControlAuthMaterial = {
+	headers?: Record<string, string>;
+	cookies?: Record<string, string>;
+	query?: Record<string, string>;
+};
+
+type UpstreamControlAuthConfig = {
+	profiles?: Record<string, UpstreamControlAuthMaterial>;
+};
+
+type UsageQueryRequestConfig = {
+	url: string;
+	method?: string;
+	authProfile?: string;
+	headers?: Record<string, string>;
+	query?: Record<string, string>;
+};
+
+type UsageQueryConfig = {
+	provider: ProviderId;
+	request: UsageQueryRequestConfig;
+};
+
+type ProviderRuntimeInput = {
+	routePrefix?: string;
+	modelsEnabled?: boolean | string;
+	upstreamBaseUrl?: string;
+	anthropicUpstreamBaseUrl?: string;
+	models?: unknown;
+	upstreamControlAuth?: string | UpstreamControlAuthConfig;
+	usageQuery?: string | UsageQueryConfig;
+	MODELS_ENABLED?: boolean | string;
+	UPSTREAM_BASE_URL?: string;
+	ANTHROPIC_UPSTREAM_BASE_URL?: string;
+	MODELS_JSON?: unknown;
+	UPSTREAM_CONTROL_AUTH?: string | UpstreamControlAuthConfig;
+	USAGE_QUERY_CONFIG?: string | UsageQueryConfig;
+};
+
+type ProviderRuntimeConfig = {
 	routePrefix: string;
 	modelsEnabled: boolean;
 	upstreamBaseUrl: string;
 	anthropicUpstreamBaseUrl: string;
 	models: ModelResponseItem[];
+	upstreamControlAuth: UpstreamControlAuthConfig;
+	usageQuery: UsageQueryConfig | null;
 };
 
 type RuntimeEnv = {
@@ -37,6 +91,10 @@ type RuntimeEnv = {
 	UPSTREAM_BASE_URL?: string;
 	ANTHROPIC_UPSTREAM_BASE_URL?: string;
 	MODELS_JSON?: string;
+	UPSTREAM_CONTROL_AUTH?: string | UpstreamControlAuthConfig;
+	USAGE_QUERY_CONFIG?: string | UsageQueryConfig;
+	DEFAULT_PROVIDER_PREFIX?: string;
+	PROVIDERS_CONFIG?: string | Record<string, ProviderRuntimeInput>;
 };
 
 function json(data: unknown, init?: ResponseInit): Response {
@@ -72,8 +130,12 @@ function methodNotAllowed(method: string, allowed: string): Response {
 	);
 }
 
-function parseBoolean(value: string | undefined, defaultValue: boolean): boolean {
-	if (!value) {
+function parseBoolean(value: unknown, defaultValue: boolean): boolean {
+	if (typeof value === "boolean") {
+		return value;
+	}
+
+	if (typeof value !== "string" || value.length === 0) {
 		return defaultValue;
 	}
 
@@ -138,47 +200,218 @@ function defaultModels(): ModelResponseItem[] {
 	}));
 }
 
-function parseModelsJson(value: string | undefined): ModelResponseItem[] {
-	if (!value) {
+function normalizeModelInput(
+	item: unknown,
+	fallbackId?: string,
+): ModelResponseItem | null {
+	if (!item || typeof item !== "object") {
+		return null;
+	}
+
+	const model = item as ModelInput;
+	const rawId =
+		typeof model.id === "string"
+			? model.id
+			: typeof model.name === "string"
+				? model.name
+				: fallbackId;
+
+	if (!rawId || rawId.trim().length === 0) {
+		return null;
+	}
+
+	return {
+		id: rawId.trim(),
+		object: "model",
+		created:
+			typeof model.created === "number" && Number.isFinite(model.created)
+				? model.created
+				: DEFAULT_MODEL_CREATED_AT,
+		owned_by:
+			typeof model.owned_by === "string" && model.owned_by.trim().length > 0
+				? model.owned_by.trim()
+				: DEFAULT_MODEL_OWNER,
+	};
+}
+
+function parseModelsInput(value: unknown): ModelResponseItem[] {
+	if (value === undefined || value === null) {
 		return defaultModels();
 	}
 
 	try {
-		const parsed = JSON.parse(value) as ModelInput[];
-		if (!Array.isArray(parsed)) {
+		const parsed =
+			typeof value === "string" ? (JSON.parse(value) as unknown) : value;
+		let models: Array<ModelResponseItem | null> = [];
+
+		if (Array.isArray(parsed)) {
+			models = parsed.map((item) => normalizeModelInput(item));
+		} else if (parsed && typeof parsed === "object") {
+			models = Object.entries(parsed).map(([key, item]) =>
+				normalizeModelInput(item, key),
+			);
+		} else {
 			return defaultModels();
 		}
 
-		const models = parsed
-			.filter((item) => item && typeof item.id === "string" && item.id.trim().length > 0)
-			.map((item) => ({
-				id: item.id.trim(),
-				object: "model" as const,
-				created:
-					typeof item.created === "number" && Number.isFinite(item.created)
-						? item.created
-						: DEFAULT_MODEL_CREATED_AT,
-				owned_by:
-					typeof item.owned_by === "string" && item.owned_by.trim().length > 0
-						? item.owned_by.trim()
-						: DEFAULT_MODEL_OWNER,
-			}));
+		const normalizedModels = models.filter((item): item is ModelResponseItem => item !== null);
 
-		return models.length > 0 ? models : defaultModels();
+		return normalizedModels.length > 0 ? normalizedModels : defaultModels();
 	} catch {
 		return defaultModels();
 	}
 }
 
+function parseUpstreamControlAuth(
+	value: RuntimeEnv["UPSTREAM_CONTROL_AUTH"],
+): UpstreamControlAuthConfig {
+	if (!value) {
+		return {};
+	}
+
+	if (typeof value === "string") {
+		try {
+			const parsed = JSON.parse(value) as unknown;
+			if (parsed && typeof parsed === "object") {
+				return parsed as UpstreamControlAuthConfig;
+			}
+		} catch {
+			return {};
+		}
+
+		return {};
+	}
+
+	if (typeof value === "object") {
+		return value;
+	}
+
+	return {};
+}
+
+function parseUsageQueryConfig(
+	value: RuntimeEnv["USAGE_QUERY_CONFIG"],
+): UsageQueryConfig | null {
+	if (!value) {
+		return null;
+	}
+
+	const isUsageQueryConfig = (candidate: unknown): candidate is UsageQueryConfig => {
+		if (!candidate || typeof candidate !== "object") {
+			return false;
+		}
+
+		const parsed = candidate as Partial<UsageQueryConfig>;
+		return (
+			typeof parsed.provider === "string" &&
+			typeof parsed.request?.url === "string" &&
+			parsed.request.url.trim().length > 0
+		);
+	};
+
+	if (typeof value === "string") {
+		try {
+			const parsed = JSON.parse(value) as unknown;
+			return isUsageQueryConfig(parsed) ? parsed : null;
+		} catch {
+			return null;
+		}
+	}
+
+	return isUsageQueryConfig(value) ? value : null;
+}
+
 function readRuntimeConfig(env: RuntimeEnv): RuntimeConfig {
-	return {
-		routePrefix: normalizePrefix(env.ROUTE_PREFIX),
-		modelsEnabled: parseBoolean(env.MODELS_ENABLED, true),
-		upstreamBaseUrl: normalizeUpstreamBaseUrl(env.UPSTREAM_BASE_URL),
-		anthropicUpstreamBaseUrl: normalizeAnthropicUpstreamBaseUrl(
-			env.ANTHROPIC_UPSTREAM_BASE_URL,
+	const parseProvidersConfig = (
+		value: RuntimeEnv["PROVIDERS_CONFIG"],
+	): Record<string, ProviderRuntimeInput> => {
+		if (!value) {
+			return {};
+		}
+
+		if (typeof value === "string") {
+			try {
+				const parsed = JSON.parse(value) as unknown;
+				if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+					return parsed as Record<string, ProviderRuntimeInput>;
+				}
+			} catch {
+				return {};
+			}
+
+			return {};
+		}
+
+		if (typeof value === "object" && !Array.isArray(value)) {
+			return value;
+		}
+
+		return {};
+	};
+
+	const buildProviderRuntimeConfig = (
+		input: ProviderRuntimeInput,
+		fallbackPrefix?: string,
+	): ProviderRuntimeConfig => ({
+		routePrefix: normalizePrefix(input.routePrefix ?? fallbackPrefix),
+		modelsEnabled: parseBoolean(
+			input.modelsEnabled ?? input.MODELS_ENABLED,
+			true,
 		),
-		models: parseModelsJson(env.MODELS_JSON),
+		upstreamBaseUrl: normalizeUpstreamBaseUrl(
+			input.upstreamBaseUrl ?? input.UPSTREAM_BASE_URL,
+		),
+		anthropicUpstreamBaseUrl: normalizeAnthropicUpstreamBaseUrl(
+			input.anthropicUpstreamBaseUrl ?? input.ANTHROPIC_UPSTREAM_BASE_URL,
+		),
+		models: parseModelsInput(input.models ?? input.MODELS_JSON),
+		upstreamControlAuth: parseUpstreamControlAuth(
+			input.upstreamControlAuth ?? input.UPSTREAM_CONTROL_AUTH,
+		),
+		usageQuery: parseUsageQueryConfig(
+			input.usageQuery ?? input.USAGE_QUERY_CONFIG,
+		),
+	});
+
+	const configuredProviders = Object.entries(parseProvidersConfig(env.PROVIDERS_CONFIG))
+		.map(([key, value]) => buildProviderRuntimeConfig(value, key))
+		.filter((provider) => provider.routePrefix.length > 0);
+
+	if (configuredProviders.length > 0) {
+		const providers = Object.fromEntries(
+			configuredProviders.map((provider) => [provider.routePrefix, provider]),
+		);
+		const defaultProviderPrefix = env.DEFAULT_PROVIDER_PREFIX
+			? normalizePrefix(env.DEFAULT_PROVIDER_PREFIX)
+			: null;
+
+		return {
+			providers,
+			defaultProviderPrefix:
+				defaultProviderPrefix && providers[defaultProviderPrefix]
+					? defaultProviderPrefix
+					: null,
+		};
+	}
+
+	const singleProvider = buildProviderRuntimeConfig(
+		{
+			routePrefix: env.ROUTE_PREFIX,
+			MODELS_ENABLED: env.MODELS_ENABLED,
+			UPSTREAM_BASE_URL: env.UPSTREAM_BASE_URL,
+			ANTHROPIC_UPSTREAM_BASE_URL: env.ANTHROPIC_UPSTREAM_BASE_URL,
+			MODELS_JSON: env.MODELS_JSON,
+			UPSTREAM_CONTROL_AUTH: env.UPSTREAM_CONTROL_AUTH,
+			USAGE_QUERY_CONFIG: env.USAGE_QUERY_CONFIG,
+		},
+		env.ROUTE_PREFIX,
+	);
+
+	return {
+		providers: {
+			[singleProvider.routePrefix]: singleProvider,
+		},
+		defaultProviderPrefix: singleProvider.routePrefix,
 	};
 }
 
@@ -224,22 +457,92 @@ function modelsResponse(models: ModelResponseItem[]): Response {
 	});
 }
 
-function isModelsPath(pathname: string, prefix: string): boolean {
-	return pathname === `/${prefix}/v1/models` || pathname === "/v1/models";
+type RouteKind = "models" | "chat" | "anthropic" | "usage";
+
+type ResolvedRoute = {
+	kind: RouteKind;
+	provider: ProviderRuntimeConfig;
+};
+
+function resolveRoute(pathname: string, config: RuntimeConfig): ResolvedRoute | null {
+	const suffixes: Array<{ kind: RouteKind; suffix: string }> = [
+		{ kind: "models", suffix: "/v1/models" },
+		{ kind: "chat", suffix: "/v1/chat/completions" },
+		{ kind: "anthropic", suffix: "/anthropic/v1/messages" },
+		{ kind: "usage", suffix: "/v1/usage" },
+	];
+
+	for (const provider of Object.values(config.providers)) {
+		for (const { kind, suffix } of suffixes) {
+			if (pathname === `/${provider.routePrefix}${suffix}`) {
+				return { kind, provider };
+			}
+		}
+	}
+
+	if (!config.defaultProviderPrefix) {
+		return null;
+	}
+
+	const defaultProvider = config.providers[config.defaultProviderPrefix];
+	if (!defaultProvider) {
+		return null;
+	}
+
+	for (const { kind, suffix } of suffixes) {
+		if (pathname === suffix) {
+			return { kind, provider: defaultProvider };
+		}
+	}
+
+	return null;
 }
 
-function isChatCompletionsPath(pathname: string, prefix: string): boolean {
-	return (
-		pathname === `/${prefix}/v1/chat/completions` ||
-		pathname === "/v1/chat/completions"
-	);
+function buildCookieHeader(cookies: Record<string, string> | undefined): string | null {
+	if (!cookies) {
+		return null;
+	}
+
+	const pairs = Object.entries(cookies)
+		.filter(([, value]) => typeof value === "string" && value.trim().length > 0)
+		.map(([name, value]) => `${name}=${value}`);
+
+	return pairs.length > 0 ? pairs.join("; ") : null;
 }
 
-function isAnthropicMessagesPath(pathname: string, prefix: string): boolean {
-	return (
-		pathname === `/${prefix}/anthropic/v1/messages` ||
-		pathname === "/anthropic/v1/messages"
-	);
+function buildUsageRequest(
+	usageQuery: UsageQueryConfig,
+	upstreamControlAuth: UpstreamControlAuthConfig,
+): Request {
+	const upstreamUrl = new URL(usageQuery.request.url);
+	const profile = usageQuery.request.authProfile
+		? upstreamControlAuth.profiles?.[usageQuery.request.authProfile]
+		: undefined;
+
+	for (const [key, value] of Object.entries(profile?.query ?? {})) {
+		upstreamUrl.searchParams.set(key, value);
+	}
+	for (const [key, value] of Object.entries(usageQuery.request.query ?? {})) {
+		upstreamUrl.searchParams.set(key, value);
+	}
+
+	const headers = new Headers();
+	for (const [key, value] of Object.entries(profile?.headers ?? {})) {
+		headers.set(key, value);
+	}
+	for (const [key, value] of Object.entries(usageQuery.request.headers ?? {})) {
+		headers.set(key, value);
+	}
+
+	const cookieHeader = buildCookieHeader(profile?.cookies);
+	if (cookieHeader) {
+		headers.set("cookie", cookieHeader);
+	}
+
+	return new Request(upstreamUrl, {
+		method: usageQuery.request.method ?? "GET",
+		headers,
+	});
 }
 
 async function proxyChatCompletions(
@@ -326,6 +629,35 @@ async function proxyAnthropicMessages(
 	});
 }
 
+async function proxyUsage(provider: ProviderRuntimeConfig): Promise<Response> {
+	if (!provider.usageQuery) {
+		return errorResponse(
+			501,
+			"usage_query_not_configured",
+			"Usage query is not configured for this provider.",
+		);
+	}
+
+	const upstreamRequest = buildUsageRequest(
+		provider.usageQuery,
+		provider.upstreamControlAuth,
+	);
+	const upstreamResponse = await fetch(upstreamRequest);
+
+	if (!upstreamResponse.ok) {
+		const errorText = await upstreamResponse.text();
+		return new Response(errorText, {
+			status: upstreamResponse.status,
+			statusText: upstreamResponse.statusText,
+			headers: buildBufferedErrorHeaders(upstreamResponse.headers),
+		});
+	}
+
+	const payload = await upstreamResponse.json();
+	const normalized = normalizeUsage(provider.usageQuery.provider, payload);
+	return json(normalized);
+}
+
 export default {
 	async fetch(
 		request: Request,
@@ -334,9 +666,10 @@ export default {
 	): Promise<Response> {
 		const url = new URL(request.url);
 		const config = readRuntimeConfig(env);
+		const resolvedRoute = resolveRoute(url.pathname, config);
 
-		if (isModelsPath(url.pathname, config.routePrefix)) {
-			if (!config.modelsEnabled) {
+		if (resolvedRoute?.kind === "models") {
+			if (!resolvedRoute.provider.modelsEnabled) {
 				return errorResponse(
 					403,
 					"models_endpoint_disabled",
@@ -347,21 +680,34 @@ export default {
 			if (request.method !== "GET") {
 				return methodNotAllowed(request.method, "GET");
 			}
-			return modelsResponse(config.models);
+			return modelsResponse(resolvedRoute.provider.models);
 		}
 
-		if (isChatCompletionsPath(url.pathname, config.routePrefix)) {
+		if (resolvedRoute?.kind === "usage") {
+			if (request.method !== "GET") {
+				return methodNotAllowed(request.method, "GET");
+			}
+			return proxyUsage(resolvedRoute.provider);
+		}
+
+		if (resolvedRoute?.kind === "chat") {
 			if (request.method !== "POST") {
 				return methodNotAllowed(request.method, "POST");
 			}
-			return proxyChatCompletions(request, config.upstreamBaseUrl);
+			return proxyChatCompletions(
+				request,
+				resolvedRoute.provider.upstreamBaseUrl,
+			);
 		}
 
-		if (isAnthropicMessagesPath(url.pathname, config.routePrefix)) {
+		if (resolvedRoute?.kind === "anthropic") {
 			if (request.method !== "POST") {
 				return methodNotAllowed(request.method, "POST");
 			}
-			return proxyAnthropicMessages(request, config.anthropicUpstreamBaseUrl);
+			return proxyAnthropicMessages(
+				request,
+				resolvedRoute.provider.anthropicUpstreamBaseUrl,
+			);
 		}
 
 		console.warn("request_not_found", {

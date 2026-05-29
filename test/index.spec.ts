@@ -132,6 +132,67 @@ describe("baidu gateway worker", () => {
 		});
 	});
 
+	it("supports MODELS_JSON object maps with id and limit fields", async () => {
+		const request = new IncomingRequest("http://example.com/v1/models");
+		const ctx = createExecutionContext();
+
+		const response = await worker.fetch(
+			request,
+			withEnv({
+					MODELS_JSON: JSON.stringify({
+						"DeepSeek-V3.2": {
+							id: "DeepSeek-V3.2",
+							limit: {
+								context: 128000,
+								output: 64000,
+							},
+						},
+						"GLM-5": {
+							id: "GLM-5",
+							limit: {
+								context: 200000,
+								output: 32000,
+							},
+						},
+						"Qwen3-Coder": {
+							id: "Qwen3-Coder",
+							limit: {
+								context: 64000,
+								output: 8000,
+						},
+					},
+				}),
+			}),
+			ctx,
+		);
+		await waitOnExecutionContext(ctx);
+
+		expect(response.status).toBe(200);
+		await expect(response.json()).resolves.toEqual({
+			object: "list",
+			data: [
+				{
+					id: "DeepSeek-V3.2",
+					object: "model",
+					created: 1775601600,
+					owned_by: "openai",
+				},
+				{
+					id: "GLM-5",
+					object: "model",
+					created: 1775601600,
+					owned_by: "openai",
+				},
+				{
+					id: "Qwen3-Coder",
+					object: "model",
+					created: 1775601600,
+					owned_by: "openai",
+				},
+			],
+		});
+	});
+
 	it("supports the root OpenAI-compatible models path", async () => {
 		const request = new IncomingRequest("http://example.com/v1/models");
 		const ctx = createExecutionContext();

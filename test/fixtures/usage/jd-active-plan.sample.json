@@ -1,0 +1,123 @@
+{
+  "error": null,
+  "requestId": "request-redacted",
+  "result": {
+    "plan_id": "plan-redacted",
+    "name": "高级开发者套餐",
+    "code": "coding-plan-pro-package.original",
+    "description": "高阶用户大规模编程需求",
+    "plan_type": "pro",
+    "default_model": "GLM-5",
+    "auto_renew": 0,
+    "start_time": "2026-04-26 10:33:14",
+    "end_time": "2026-06-29 23:59:59",
+    "instance_id": "instance-redacted",
+    "benefits": [
+      {
+        "type": "model_access",
+        "title": "模型支持列表",
+        "content": "包含 Lite版所有模型支持"
+      },
+      {
+        "type": "speed",
+        "title": "编程工具列表",
+        "content": "包含 Lite版所有编程工具支持"
+      },
+      {
+        "type": "speed",
+        "title": "响应",
+        "content": "优先响应与处理速度"
+      }
+    ],
+    "limits": [
+      {
+        "metric_type": "request_count",
+        "limit_value": 1200,
+        "unit": "count",
+        "period": "5hours"
+      },
+      {
+        "metric_type": "request_count",
+        "limit_value": 45000,
+        "unit": "count",
+        "period": "7days"
+      },
+      {
+        "metric_type": "request_count",
+        "limit_value": 90000,
+        "unit": "count",
+        "period": "month"
+      }
+    ],
+    "models": [
+      {
+        "model": "DeepSeek-V3.2",
+        "logo": "https://maas.s3.cn-north-1.jdcloud-oss.com/DeepSeek-R1/Deepseek%202.png",
+        "description": "DeepSeek-V3.2 的目标是平衡推理能力与输出长度，适合日常使用，例如问答场景和通用 Agent 任务场景。"
+      },
+      {
+        "model": "GLM-5",
+        "logo": "https://maas.s3.cn-north-1.jdcloud-oss.com/glm-4.5/zhipu.png",
+        "description": "GLM-5专注于复杂系统工程和长周期智能体任务。与 GLM-4.5 相比，GLM-5 的参数量从 355B（激活参数 32B）扩展至 744B（激活参数 40B），预训练数据量也从 23T tokens 增加到 28.5T tokens。此外，GLM-5 还集成了 DeepSeek 稀疏注意力（DSA）机制，在保持长上下文能力的同时大幅降低了部署成本。"
+      },
+      {
+        "model": "GLM-4.7",
+        "logo": "https://maas.s3.cn-north-1.jdcloud-oss.com/glm-4.5/zhipu.png",
+        "description": "GLM-4.7 是智谱最新旗舰模型，GLM-4.7 面向 Agentic Coding 场景强化了编码能力、长程任务规划与工具协同，并在多个公开基准的当期榜单中取得开源模型中的领先表现。"
+      },
+      {
+        "model": "MiniMax-M2.5",
+        "logo": "https://maas.s3.cn-north-1.jdcloud-oss.com/Image-01/MiniMax.png",
+        "description": "经过数十万个真实复杂环境中的大规模强化学习训练，M2.5 在编程、工具调用和搜索、办公等生产力场景都达到或者刷新了行业的 SOTA"
+      },
+      {
+        "model": "Kimi-K2.5",
+        "logo": "https://maas.s3.cn-north-1.jdcloud-oss.com/Kimi-K2/kimi.png",
+        "description": "kimi-k2.5 是 Kimi 迄今最全能的模型，原生的多模态架构设计，同时支持视觉与文本输入、思考与非思考模式、对话与 Agent 任务"
+      },
+      {
+        "model": "Kimi-K2-Turbo",
+        "logo": "https://maas.s3.cn-north-1.jdcloud-oss.com/Kimi-K2/kimi.png",
+        "description": "kimi-k2-turbo-preview 模型上下文长度 256k，是 kimi k2 的高速版本模型，始终对标最新版本的 kimi-k2 模型（kimi-k2-0905-preview）。模型参数与 kimi-k2 一致，但输出速度已提至每秒 60 tokens，最高可达每秒 100 tokens"
+      },
+      {
+        "model": "Qwen3-Coder",
+        "logo": "https://maas.s3.cn-north-1.jdcloud-oss.com/qwen3-reranker-8b/qwen.png",
+        "description": "隆重推出Qwen3-Coder，这是Qwen系列迄今为止最具代理性的代码模型。"
+      }
+    ],
+    "usages": [
+      {
+        "type": "5hours",
+        "count": 18
+      },
+      {
+        "type": "7days",
+        "count": 396
+      },
+      {
+        "type": "month",
+        "count": 11339
+      }
+    ]
+  },
+  "responseObj": {
+    "size": 0,
+    "timeout": 0,
+    "nonce": "nonce-redacted",
+    "headerObj": {
+      "connection": "close",
+      "content-type": "application/json",
+      "date": "Fri, 29 May 2026 22:30:12 GMT",
+      "decode-user": "redacted",
+      "transfer-encoding": "chunked",
+      "via": "jd-gateway/1.0.1",
+      "x-jdcloud-code-source": "upstream",
+      "x-jdcloud-operationid": "describeUserActivePlan",
+      "x-jdcloud-proxy-latency": "3",
+      "x-jdcloud-request-id": "request-redacted",
+      "x-jdcloud-trace-id": "trace-redacted",
+      "x-jdcloud-upstream-latency": "114"
+    }
+  }
+}

@@ -18,6 +18,7 @@
 - OpenAI Chat Completions: `/v1/chat/completions`
 - Anthropic Messages: `/anthropic/v1/messages`
 - OpenAI Models 列表: `/v1/models`（可开关）
+- Relay 用量元数据: `/v1/usage`（可选，返回 provider 原生 usage 的归一化视图）
 
 同时支持带前缀和不带前缀两种路径：
 - 不带前缀：`/v1/*`、`/anthropic/v1/*`
@@ -27,10 +28,11 @@
 - `/yourprefix/v1/chat/completions`
 - `/yourprefix/anthropic/v1/messages`
 - `/yourprefix/v1/models`
+- `/yourprefix/v1/usage`
 
 ## 内置示例（可直接部署）
 
-`wrangler.jsonc` 已提供两套环境示例：
+`wrangler.jsonc` 现在内置五套可直接部署的环境示例：
 
 1. `baidu`
 - Smart Placement Host: `qianfan.baidubce.com:443`
@@ -38,7 +40,24 @@
 - Anthropic 兼容上游：`https://qianfan.baidubce.com/anthropic/coding`
 - 适合作为中国端点聚合入口（可承载百度千帆等模型能力）
 
-2. `minimax`
+2. `jd`
+- Smart Placement Host: `modelservice.jdcloud.com:443`
+- OpenAI 兼容上游：`https://modelservice.jdcloud.com/coding/openai/v1`
+- Anthropic 兼容上游：`https://modelservice.jdcloud.com/coding/anthropic`
+- 已带 `describeUserActivePlan` 的 `/v1/usage` 鉴权配置
+
+3. `zai`
+- Smart Placement Host: `api.z.ai:443`
+- OpenAI 兼容上游：`https://api.z.ai/api/coding/paas/v4`
+- Anthropic 兼容上游：`https://api.z.ai/api/anthropic`
+- 已带 `quota/limit` 的 `/v1/usage` 鉴权配置
+
+4. `gateway`
+- 一个 Worker 同时服务 `baidu` 和 `jd` 两套路由前缀
+- 通过 `PROVIDERS_CONFIG` 按前缀区分上游、模型列表和 usage 鉴权
+- `DEFAULT_PROVIDER_PREFIX=baidu`，所以不带前缀的 `/v1/*` 默认落到百度
+
+5. `minimax`
 - Smart Placement Host: `api.minimaxi.com:443`
 - OpenAI 兼容上游：`https://api.minimaxi.com/v1`
 - Anthropic 兼容上游：`https://api.minimaxi.com/anthropic`
@@ -64,6 +83,9 @@ pnpm dev
 
 ```bash
 pnpm dev --env baidu
+pnpm dev --env jd
+pnpm dev --env zai
+pnpm dev --env gateway
 pnpm dev --env minimax
 ```
 
@@ -72,13 +94,19 @@ pnpm dev --env minimax
 部署百度示例：
 
 ```bash
-pnpm deploy -- --env baidu
+pnpm exec wrangler deploy --env baidu
+```
+
+部署 Baidu/JD 共用网关：
+
+```bash
+pnpm exec wrangler deploy --env gateway
 ```
 
 部署 MiniMax 示例：
 
 ```bash
-pnpm deploy -- --env minimax
+pnpm exec wrangler deploy --env minimax
 ```
 
 ## 调用示例
@@ -120,7 +148,11 @@ curl -X POST "https://YOUR_WORKER_URL/YOUR_ROUTE_PREFIX/anthropic/v1/messages" \
 - `UPSTREAM_BASE_URL`: OpenAI 兼容上游地址
 - `ANTHROPIC_UPSTREAM_BASE_URL`: Anthropic 兼容上游地址
 - `MODELS_ENABLED`: 是否开放根path下的 `/v1/models`（默认 `true`）
-- `MODELS_JSON`: 自定义覆盖 `/v1/models` 接口返回列表（JSON 数组）
+- `MODELS_JSON`: 自定义覆盖 `/v1/models` 接口返回列表（支持 JSON 数组或按模型名分组的 JSON 对象）
+- `UPSTREAM_CONTROL_AUTH`: 给非标准 provider 控制台/usage 接口使用的结构化鉴权材料
+- `USAGE_QUERY_CONFIG`: 获取并归一化 provider 原生 usage 接口的结构化请求配置
+- `PROVIDERS_CONFIG`: 单个 Worker 同时承载多个 provider 时使用的前缀到配置映射
+- `DEFAULT_PROVIDER_PREFIX`: 配合 `PROVIDERS_CONFIG` 使用时，不带前缀 `/v1/*` 默认落到哪个 provider
 
 示例：
 
@@ -129,6 +161,94 @@ curl -X POST "https://YOUR_WORKER_URL/YOUR_ROUTE_PREFIX/anthropic/v1/messages" \
   { "id": "your-model-1" },
   { "id": "your-model-2", "owned_by": "your-provider", "created": 1775601600 }
 ]
+```
+
+也支持这种按模型名分组的对象格式：
+
+```json
+{
+  "DeepSeek-V3.2": {
+    "id": "DeepSeek-V3.2",
+    "limit": {
+      "context": 128000,
+      "output": 64000
+    }
+  },
+  "GLM-5": {
+    "id": "GLM-5",
+    "limit": {
+      "context": 200000,
+      "output": 32000
+    }
+  }
+}
+```
+
+`UPSTREAM_CONTROL_AUTH` 用来承载 provider 自己的控制面接口鉴权信息，比如
+usage、plan、quota、console metadata 这类不走标准 OpenAI/Anthropic 鉴权的
+接口。建议按 profile 分组，这样同一 provider 下不同操作可以带不同的
+headers、cookies 或 query 参数，而不需要再改配置模型：
+
+```json
+{
+  "profiles": {
+    "usage_default": {
+      "cookies": {
+        "sessionid": "..."
+      }
+    },
+    "resource_list": {
+      "headers": {
+        "x-custom-token": "..."
+      },
+      "cookies": {
+        "sessionid": "..."
+      },
+      "query": {
+        "region": "cn"
+      }
+    }
+  }
+}
+```
+
+`USAGE_QUERY_CONFIG` 用来告诉 relay 应该调用哪个 provider 原生 usage 接口，
+以及要绑定哪个 auth profile：
+
+```json
+{
+  "provider": "baidu",
+  "request": {
+    "url": "https://console.bce.baidu.com/api/qianfan/charge/codingPlan/resourceList",
+    "method": "GET",
+    "authProfile": "resource_list"
+  }
+}
+```
+
+`PROVIDERS_CONFIG` 用来把运行时从“单 provider”提升成“按前缀分流的 provider
+表”。内置的 `gateway` 环境就是靠这个机制同时代理 Baidu 和 JD：
+
+```json
+{
+  "baidu": {
+    "upstreamBaseUrl": "https://qianfan.baidubce.com/v2/coding",
+    "anthropicUpstreamBaseUrl": "https://qianfan.baidubce.com/anthropic/coding",
+    "models": [{ "id": "ernie-4.5-turbo-20260402" }],
+    "usageQuery": {
+      "provider": "baidu",
+      "request": {
+        "url": "https://console.bce.baidu.com/api/qianfan/charge/codingPlan/resourceList",
+        "authProfile": "resource_list"
+      }
+    }
+  },
+  "jd": {
+    "upstreamBaseUrl": "https://modelservice.jdcloud.com/coding/openai/v1",
+    "anthropicUpstreamBaseUrl": "https://modelservice.jdcloud.com/coding/anthropic",
+    "models": [{ "id": "GLM-5" }]
+  }
+}
 ```
 
 ## 延迟优化说明
@@ -151,7 +271,7 @@ pnpm smoke
 ## 目录结构
 
 - `src/index.ts`: Worker 入口与路由转发逻辑
-- `wrangler.jsonc`: 部署与多环境（baidu/minimax）配置
+- `wrangler.jsonc`: 部署与多环境（baidu/jd/zai/gateway/minimax）配置
 - `test/index.spec.ts`: 单元测试
 - `scripts/smoke-test.sh`: 烟雾测试脚本
 
